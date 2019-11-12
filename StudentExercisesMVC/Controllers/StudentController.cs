@@ -45,15 +45,19 @@ namespace StudentExercisesMVC.Controllers
                     SqlDataReader reader = cmd.ExecuteReader();
 
                     List<Student> students = new List<Student>();
+                    
                     while (reader.Read())
                     {
+                        int cohortId = reader.GetInt32(reader.GetOrdinal("CohortId"));
+                        var cohort = GetCohort(cohortId);
                         Student student = new Student
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
                             FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
                             LastName = reader.GetString(reader.GetOrdinal("LastName")),
                             SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId"))
+                            CohortId = cohortId,
+                            Cohort = cohort
                         };
 
                         students.Add(student);
@@ -164,37 +168,25 @@ namespace StudentExercisesMVC.Controllers
         {
             using (SqlConnection conn = Connection)
             {
-                conn.Open();
-                using (SqlCommand cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = @"SELECT s.Id,
-                                            s.FirstName,
-                                            s.LastName,
-                                            s.SlackHandle,
-                                            s.CohortId
-                                        FROM Student s
-                                        WHERE id = @id";
-                    cmd.Parameters.Add(new SqlParameter("@id", id));
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    Student student = null;
-                    if (reader.Read())
+                var viewModel = new StudentCreateViewModel();
+                var cohorts = GetAllCohorts();
+                var student = GetStudent(id);
+                var selectItems = cohorts
+                    .Select(cohort => new SelectListItem
                     {
-                        student = new Student
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId"))
-                        };
-                    }
+                        Text = cohort.Name,
+                        Value = cohort.Id.ToString()
+                    })
+                    .ToList();
 
-                    reader.Close();
-                    if (student == null) return NotFound();
-
-                    return View(student);
-                }
+                selectItems.Insert(0, new SelectListItem
+                {
+                    Text = "Choose cohort...",
+                    Value = "0"
+                });
+                viewModel.Cohorts = selectItems;
+                viewModel.Student = student;
+                return View(viewModel);
             }
         }
 
@@ -329,6 +321,69 @@ namespace StudentExercisesMVC.Controllers
                     reader.Close();
 
                     return cohorts;
+                }
+            }
+        }
+        private Student GetStudent(int id)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                conn.Open();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT s.Id,
+                                            s.FirstName,
+                                            s.LastName,
+                                            s.SlackHandle,
+                                            s.CohortId
+                                        FROM Student s
+                                        WHERE id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    Student student = null;
+                    if (reader.Read())
+                    {
+                        student = new Student
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId"))
+                        };
+                    }
+
+                    reader.Close();
+
+                    return student;
+                }
+            }
+        }
+        private Cohort GetCohort(int id)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                conn.Open();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Id, Name FROM Cohort WHERE id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    Cohort cohort = null;
+                    if (reader.Read())
+                    {
+                        cohort = new Cohort()
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            Name = reader.GetString(reader.GetOrdinal("Name")),
+                        };
+                    }
+
+                    reader.Close();
+
+                    return cohort;
                 }
             }
         }
