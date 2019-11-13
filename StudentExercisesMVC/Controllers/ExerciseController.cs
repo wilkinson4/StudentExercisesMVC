@@ -124,7 +124,9 @@ namespace StudentExercisesMVC.Controllers
         // GET: Exercise/Delete/5
         public ActionResult Delete(int id)
         {
-            return View();
+            Exercise exercise = GetExercise(id);
+            if (exercise == null) return NotFound();
+            return View(exercise);
         }
 
         // POST: Exercise/Delete/5
@@ -134,9 +136,23 @@ namespace StudentExercisesMVC.Controllers
         {
             try
             {
-                // TODO: Add delete logic here
+                using (SqlConnection conn = Connection)
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"DELETE FROM StudentExercise WHERE ExerciseId = @id 
+                                            DELETE FROM Exercise WHERE Id = @id";
+                        cmd.Parameters.Add(new SqlParameter("@id", id));
 
-                return RedirectToAction(nameof(Index));
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return RedirectToAction(nameof(Index));
+                        }
+                        throw new Exception("No rows affected");
+                    }
+                }
             }
             catch
             {
