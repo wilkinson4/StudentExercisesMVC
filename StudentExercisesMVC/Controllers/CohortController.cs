@@ -121,7 +121,9 @@ namespace StudentExercisesMVC.Controllers
         // GET: Cohort/Delete/5
         public ActionResult Delete(int id)
         {
-            return View();
+            Cohort cohort = GetCohort(id);
+            if (cohort == null) return NotFound();
+            return View(cohort);
         }
 
         // POST: Cohort/Delete/5
@@ -131,9 +133,22 @@ namespace StudentExercisesMVC.Controllers
         {
             try
             {
-                // TODO: Add delete logic here
+                using (SqlConnection conn = Connection)
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"DELETE FROM Cohort WHERE Id = @id";
+                        cmd.Parameters.Add(new SqlParameter("@id", id));
 
-                return RedirectToAction(nameof(Index));
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return RedirectToAction(nameof(Index));
+                        }
+                        throw new Exception("No rows affected");
+                    }
+                }
             }
             catch
             {
