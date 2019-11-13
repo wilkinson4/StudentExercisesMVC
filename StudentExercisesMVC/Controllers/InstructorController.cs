@@ -135,19 +135,60 @@ namespace StudentExercisesMVC.Controllers
         // GET: Instructor/Edit/5
         public ActionResult Edit(int id)
         {
-            return View();
+            using (SqlConnection conn = Connection)
+            {
+                var viewModel = new InstructorCreateViewModel();
+                var cohorts = GetAllCohorts();
+                var instructor = GetInstructor(id);
+                var selectItems = cohorts
+                    .Select(cohort => new SelectListItem
+                    {
+                        Text = cohort.Name,
+                        Value = cohort.Id.ToString()
+                    })
+                    .ToList();
+
+                selectItems.Insert(0, new SelectListItem
+                {
+                    Text = "Choose cohort...",
+                    Value = "0"
+                });
+                viewModel.Cohorts = selectItems;
+                viewModel.Instructor = instructor;
+                return View(viewModel);
+            }
         }
 
         // POST: Instructor/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public ActionResult Edit(int id, Instructor instructor)
         {
             try
             {
-                // TODO: Add update logic here
+                using (SqlConnection conn = Connection)
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"UPDATE Instructor
+                                            SET FirstName = @firstName, LastName = @lastName, CohortId = @cohortId, SlackHandle = @slackHandle
+                                            WHERE id = @id";
 
-                return RedirectToAction(nameof(Index));
+                        cmd.Parameters.Add(new SqlParameter("@id", id));
+                        cmd.Parameters.Add(new SqlParameter("@firstName", instructor.FirstName));
+                        cmd.Parameters.Add(new SqlParameter("@lastName", instructor.LastName));
+                        cmd.Parameters.Add(new SqlParameter("@slackHandle", instructor.SlackHandle));
+                        cmd.Parameters.Add(new SqlParameter("@cohortId", instructor.CohortId));
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return RedirectToAction(nameof(Index));
+                        }
+                        throw new Exception("No rows affected");
+                    }
+                }
             }
             catch
             {
