@@ -70,40 +70,11 @@ namespace StudentExercisesMVC.Controllers
         // GET: Instructor/Details/5
         public ActionResult Details(int id)
         {
-            using (SqlConnection conn = Connection)
-            {
-                conn.Open();
-                using (SqlCommand cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = @"SELECT i.Id,
-                                            i.FirstName,
-                                            i.LastName,
-                                            i.SlackHandle,
-                                            i.CohortId
-                                        FROM Instructor i
-                                        WHERE id = @id";
-                    cmd.Parameters.Add(new SqlParameter("@id", id));
-                    SqlDataReader reader = cmd.ExecuteReader();
+            Instructor instructor = GetInstructor(id);
+            if (instructor == null) return NotFound();
 
-                    Instructor instructor = null;
-                    if (reader.Read())
-                    {
-                        instructor = new Instructor
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId"))
-                        };
-                    }
+            return View(instructor);
 
-                    reader.Close();
-                    if (instructor == null) return NotFound();
-
-                    return View(instructor);
-                }
-            }
         }
 
         // GET: Instructor/Create
@@ -187,7 +158,10 @@ namespace StudentExercisesMVC.Controllers
         // GET: Instructor/Delete/5
         public ActionResult Delete(int id)
         {
-            return View();
+            Instructor instructor = GetInstructor(id);
+            if (instructor == null) return NotFound();
+
+            return View(instructor);
         }
 
         // POST: Instructor/Delete/5
@@ -197,9 +171,23 @@ namespace StudentExercisesMVC.Controllers
         {
             try
             {
-                // TODO: Add delete logic here
+                using (SqlConnection conn = Connection)
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"DELETE FROM Instructor WHERE Id = @id";
+                        cmd.Parameters.Add(new SqlParameter("@id", id));
 
-                return RedirectToAction(nameof(Index));
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return RedirectToAction(nameof(Index));
+                        }
+                        throw new Exception("No rows affected");
+                    }
+                }
+
             }
             catch
             {
@@ -230,6 +218,42 @@ namespace StudentExercisesMVC.Controllers
                     reader.Close();
 
                     return cohorts;
+                }
+            }
+        }
+        private Instructor GetInstructor(int id)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                conn.Open();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT i.Id,
+                                            i.FirstName,
+                                            i.LastName,
+                                            i.SlackHandle,
+                                            i.CohortId
+                                        FROM Instructor i
+                                        WHERE id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    Instructor instructor = null;
+                    if (reader.Read())
+                    {
+                        instructor = new Instructor
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId"))
+                        };
+                    }
+
+                    reader.Close();
+
+                    return instructor;
                 }
             }
         }
