@@ -81,19 +81,39 @@ namespace StudentExercisesMVC.Controllers
         // GET: Exercise/Edit/5
         public ActionResult Edit(int id)
         {
-            return View();
+            Exercise exercise = GetExercise(id);
+            if (exercise == null) return NotFound();
+            return View(exercise);
         }
 
         // POST: Exercise/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public ActionResult Edit(int id, Exercise exercise)
         {
             try
             {
-                // TODO: Add update logic here
+                using (SqlConnection conn = Connection)
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = @"UPDATE Exercise
+                                            SET Name = @name, Language = @language
+                                            WHERE id = @id";
 
-                return RedirectToAction(nameof(Index));
+                        cmd.Parameters.Add(new SqlParameter("@id", id));
+                        cmd.Parameters.Add(new SqlParameter("@name", exercise.Name));
+                        cmd.Parameters.Add(new SqlParameter("@language", exercise.Language));
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                        {
+                            return RedirectToAction(nameof(Index));
+                        }
+                        throw new Exception("No rows affected");
+                    }
+                }
             }
             catch
             {
